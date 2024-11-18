@@ -1,1 +1,6 @@
 node_modules
+SCHEMA.DOC
+.env
+informations.json
+notes.doc
+Todo.doc
