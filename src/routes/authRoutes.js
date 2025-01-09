@@ -6,15 +6,21 @@ const User = mongoose.model('User');
 const router = express.Router();
 
 router.post('/register', async (req, res) => {  // Register a new user
-  const { fullName, email, username, password } = req.body;
+  const { firstName, lastName, email, username, password } = req.body;
+  console.log(req.body)
+
+  // console.log(`Origin: ${req.headers.origin}`);
 
   try {
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    
     if (existingUser) {
+      console.log(existingUser + " this is existing user")
       return res.status(400).json({ error: 'Email or username already exists.' });
     }
     const newUser = new User({
-      fullName,
+      firstName,
+      lastName,
       email,
       username,
       password,
@@ -27,7 +33,8 @@ router.post('/register', async (req, res) => {  // Register a new user
       message: 'User account created successfully!',
       user: {
         id: newUser._id,
-        fullName: newUser.fullName,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         email: newUser.email,
         username: newUser.username,
       },

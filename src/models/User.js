@@ -2,35 +2,40 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema({
-  fullName: {
+  firstName: {
         type: String,
         required: true,
         trim: true,
     },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true,
-    },
-    password: {
+    lastName: {
       type: String,
       required: true,
+      trim: true,
   },
-    username: {
-        type: String,
-        unique: true,
-        required: true,
-        trim: true,
-    },
-    profilePicture: {
+  email: {
       type: String,
-      default: null,
-    },
-    address: {
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  username: {
       type: String,
-      default: null,
+      unique: true,
+      required: true,
+      trim: true,
+  },
+  profilePicture: {
+    type: String,
+    default: null,
+  },
+  address: {
+    type: String,
+    default: null,
   },
   verificationStatus: {
     type: String,

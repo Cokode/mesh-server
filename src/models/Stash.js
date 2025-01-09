@@ -1,27 +1,67 @@
 import mongoose from "mongoose";
 
+const image = new mongoose.Schema({
+  assetId: String,
+  base64: String,
+  duration: String,
+  exif: String,
+  fileName: String,
+  fileSize: Number,
+  height: Number,
+  type: String,
+  uri: String,
+  pictureUrls: String,
+  width: Number,
+  canceled: false
+});
+
+
 const item = new mongoose.Schema({
-  itemName: String,
+  rewardEligibility: false, //
+  dateAdded: String, //
+  itemName: {
+    type: String,
+    required: true
+  }, //
+
+  sp_Number: { //
+    type: String,
+    required: false
+  },
+
+  ifOthers: String, //
+  itemDesc: String, //
+  barcodeNumber: String, //
+
   category: {
     type: String,
     enum: [
       'Electronics',
       'Vehicles',
-      'furniture',
-      'Clothing/Accessories',
-      'Home Appliances',
+      'Clothing',
+      'Accessories',
+      // 'Home Appliances',
       'Pets',
       'Others',
     ],
     default: null,
+  }, //
+
+  pictures: [image], //
+
+  LostStatus: { //
+    type: Boolean,
+    default: false
   },
-  itemDesc: String,
-  barcodeNumber: String,
-  picture: {
-    type: String,
-    default: null,
+
+  FoundStatus: { //
+    type: Boolean,
+    default: null
   },
-  serialNumber: String,
+
+  timeAdded: String, //
+  priorityStatus: String, //
+  tagNumber: String //
 });
 
 const stashSchema = new mongoose.Schema({
