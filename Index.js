@@ -24,7 +24,7 @@ app.use(cors());
 
 // Debugging middleware (remove later)
 app.use((req, res, next) => {
-  //console.log(`Request Body Index : ${JSON.stringify(req.body)}`);
+  console.log(`Request Body Index : ${JSON.stringify(req.body)}`);
   next();
 });
 
@@ -50,7 +50,7 @@ async function connectToDatabase() {
   const connectionString = process.env.MONGO_URI;
 
   try {
-    await mongoose.connect(connectionString, {
+    mongoose.connect(connectionString, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
