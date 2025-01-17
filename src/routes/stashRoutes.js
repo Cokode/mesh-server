@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import requireAuth from '../middlewares/requireAuth.js';
 
 const Stash = mongoose.model('Stash');
+const Reports = mongoose.model('Reports');
 const router = express.Router();
 
 router.post('/api/addstash', requireAuth, async (req, res) => {
@@ -43,6 +44,8 @@ router.get('/getItems', requireAuth, async (req, res) => {
       return res.status(404).send({ error: 'No items found for you.' });
     }
 
+    console.log(stash.registeredItems[0]._id);
+
     console.log("Returning items..." + stash.registeredItems.length);
     res.status(200).send(stash.registeredItems);
   } catch (err) {
@@ -50,5 +53,29 @@ router.get('/getItems', requireAuth, async (req, res) => {
     res.status(500).send({ error: 'Invalid request' });
   }
 });
+
+
+router.post('/reportStash', requireAuth, async (req, res) => {
+  const {lost_comment} = req.body;
+
+  try {
+
+    const reports = await Reports.findOne({"_id": "67865d76db0f34e1140b7193"})
+
+    if (reports) {
+      reports.missing.push(lost_comment);
+      console.log('found what we are looking for: ' + reports);
+      reports.save();
+
+      res.status(201).send("Hey, we added it!");
+
+    } else {
+      res.status(404).send("Hey, we did not find it!");
+    }
+
+  } catch (error) {
+    console.log(error);
+  }
+})
 
 export default router;
