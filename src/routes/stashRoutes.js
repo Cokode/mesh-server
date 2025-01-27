@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import requireAuth from '../middlewares/requireAuth.js';
+import isReportExist from '../utils/isReported.js';
 
 const Stash = mongoose.model('Stash');
 const Reports = mongoose.model('Reports');
@@ -10,20 +11,15 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
   const form = req.body;
 
   try {
-    //console.log(form);
-
-    // Find the stash for the current user
     let stash = await Stash.findOne({ userId: req.user._id });
 
-    if (stash) { // CONTINUE LATER / ENSURE NO DUPLICATE
+    if (stash) { 
 
       stash.registeredItems.push(form);
     } else {
-      // Create a new stash if it doesn't exist
       stash = new Stash({ registeredItems: [form], userId: req.user._id });
     }
 
-    // Save the stash (whether updated or new)
     await stash.save();
 
     res.status(201).send({ message: "Successfully added stash" });
@@ -33,10 +29,9 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
   }
 });
 
-
-
 router.get('/getItems', requireAuth, async (req, res) => {
   try {
+    console.log("I am in StashRoute....")
     console.log("IN Server...");
     const stash = await Stash.findOne({ userId: req.user._id });
 
@@ -77,5 +72,50 @@ router.post('/reportStash', requireAuth, async (req, res) => {
     console.log(error);
   }
 })
+
+router.post('/loadReport', requireAuth, async (req, res) => {
+  const { comment, id } = req.body;
+  console.log(req.body);
+
+  try {
+
+    const reports = await Reports.findOne({"_id": process.env.REPORTBANK})
+
+    if (isReportExist(reports.missing, id)){
+      res.status(406).send({response: "Item already has been reproted"});
+      console.log("Oops! item already exist.")
+      return;
+    }
+
+    let stash = await Stash.findOne({ userId: req.user._id });
+
+    if (stash) {
+      let lostStash = stash.registeredItems.find(element => element._id == id);
+
+      if (!lostStash) {
+        return res.status(404).send({ message: "Cannot find stash item" });
+      }
+
+      lostStash.LostStatus = true;
+      lostStash.priorityStatus = "Very important";
+      lostStash.lost_comment = comment;
+      lostStash.date_reported = new Date().toISOString();
+      
+      await reports.missing.push(lostStash);
+      reports.save();
+
+      return res.status(201).send({
+        message: "Report submitted successfully",
+        updatedItem: lostStash,
+      });
+    } else {
+      return res.status(404).send({ message: "Stash not found for the user" });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: "An error occurred", error });
+  }
+});
+
 
 export default router;
