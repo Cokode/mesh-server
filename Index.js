@@ -18,7 +18,7 @@ dotenv.config();
 const app = express();
 
 // Middleware for parsing JSON and URL-encoded data
-app.use(express.json({ limit: '10000mb' }));
+app.use(express.json({ limit: '1000000mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware for CORS

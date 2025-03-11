@@ -62,7 +62,17 @@ const item = new mongoose.Schema({
   timeAdded: String, //
   priorityStatus: String, //
   tagNumber: String, //
-  lost_comment: String
+  lost_comment: String,
+  date_reported: String,
+
+  ownerID: {
+    type: String,
+  },
+
+  ownerInfo: {
+    type: Object,
+    default: null,
+  }
 });
 
 const stashSchema = new mongoose.Schema({

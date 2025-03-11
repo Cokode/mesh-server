@@ -5,7 +5,7 @@ import dotenv from "dotenv"; // maybe remove
 
 
 const requireAuth = (req, res, next) => {
-  const {authorization} = req.headers;
+  const { authorization } = req.headers;
 
   console.log("I am in authorization...." + authorization)
 
