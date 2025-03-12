@@ -4,51 +4,55 @@ import mongoose from 'mongoose';
 import { BSON } from 'mongodb';
 import requireAuth from '../middlewares/requireAuth.js';
 import { isReportExist, deleteItem } from '../utils/isReported.js';
+import { saveImage } from '../utils/saveImage.js';
 
 const Stash = mongoose.model('Stash');
 const Reports = mongoose.model('Reports');
 const router = express.Router();
 
+
+// Route to add/save Stash to database.
 router.post('/api/addstash', requireAuth, async (req, res) => {
   const form = req.body;
-
   const searhForm = form.category == "Others"? null : form.sp_Number;
 
   try {
     let stash = await Stash.findOne({ userId: req.user._id });
     let dup = -1;
     let stashCopy = null;
+    let awsImageURL = "";
 
     if (stash) { 
+      // Search for duplicate
+      // if exist stores the index in variable dup.
       if (searhForm) {
-        console.log("checking for dup..");
         stashCopy = stash.registeredItems;
         dup = stashCopy.findIndex((e) => (e.sp_Number === form.sp_Number && form.sp_Number !== ""));
-      }
 
-      console.log("dup Index: ", dup);
-      if (dup >= 0) {
-        res.status(406).send({message: "Duplicate found. cannot add."});
-        return;
-      }
-
-      stashCopy?.forEach(e => { // remove
-        if (e.sp_Number === "") {
-          console.log("No Serial Number");
-        } else {
-          console.log("Serial Number: ", e.sp_Number );
+        if (dup >= 0) {
+          res.status(406).send({message: "Duplicate found. cannot add."});
+          return;
         }
-      })
+      }
 
-      console.log("Dada added in server.");
-      console.log(form);
+      // Save image to AWS S3, extract the imagae s3 
+      // location and save mongodDB server.
+      for (let i = 0; i < form.pictures.length; i++) {
+        awsImageURL = await saveImage(form.pictures[i].base64);
+        form.pictures[i].base64 = "",
+        form.pictures[i].pictureUrls = awsImageURL;
+        console.log(form.pictures[i].base64);
+        console.log(form.pictures[i].pictureUrls);
+      }
+
+      console.log(awsImageURL, " : ", form);
       stash.registeredItems.push(form);
     } else {
       stash = new Stash({ registeredItems: [form], userId: req.user._id });
     }
 
+    // Save new form to database.
     await stash.save();
-
     res.status(201).send({ message: "Successfully added stash" });
   } catch (error) {
     console.error("Error adding stash:", error); // Log the actual error
@@ -56,50 +60,23 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
   }
 });
 
+// Route to get all stash
 router.get('/getItems', requireAuth, async (req, res) => {
   try {
     console.log("I am in StashRoute....")
     console.log("IN Server...");
     const stash = await Stash.findOne({ userId: req.user._id });
 
-    if (!stash || stash.registeredItems.length === 0) {
-      return res.status(404).send({ error: 'No items found for you.' });
+    if (!stash || stash?.registeredItems.length === 0) {
+      return res.status(200).send({ error: 'No items found for you.' });
     }
 
-    console.log(stash.registeredItems[0]._id);
-
-    console.log("Returning items..." + stash.registeredItems.length);
     res.status(200).send(stash.registeredItems);
   } catch (err) {
     console.error("Error in /getItems:", err);
     res.status(500).send({ error: 'Invalid request' });
   }
 });
-
-
-router.post('/reportStash', requireAuth, async (req, res) => {
-  const {lost_comment} = req.body;
-
-  try {
-
-    const reports = await Reports.findOne({"_id": "67865d76db0f34e1140b7193"})
-
-    if (reports) {
-      reports.missing.push(lost_comment);
-      console.log('found what we are looking for: ' + reports);
-      reports.save();
-
-      res.status(201).send("Hey, we added it!");
-
-    } else {
-      res.status(404).send("Hey, we did not find it!");
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-})
-
 
 // This route is used to send lost item report, 
 // it will receive a comment/ descreption for the lost item
@@ -116,7 +93,6 @@ router.post('/loadReport', requireAuth, async (req, res) => {
 
     if (isReportExist(reports.missing, id)){
       res.status(406).send({response: "Item already has been reproted"});
-      console.log("Oops! item already exist.")
       return;
     }
     
@@ -166,10 +142,6 @@ router.delete('/delete', async (req, res) => {
   // reports.missing = newSet;
   // console.log(newSet?.lost_comment);
   // await reports.save();
-
-
-
-
   res.send("sucessful deleted.");
 
 })
