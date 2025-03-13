@@ -5,16 +5,20 @@ import { BSON } from 'mongodb';
 import requireAuth from '../middlewares/requireAuth.js';
 import { isReportExist, deleteItem } from '../utils/isReported.js';
 import { saveImage } from '../utils/saveImage.js';
+import { barcodeGenerator } from '../utils/barcodeGenerator.js';
 
 const Stash = mongoose.model('Stash');
 const Reports = mongoose.model('Reports');
 const router = express.Router();
 
-
+  
 // Route to add/save Stash to database.
 router.post('/api/addstash', requireAuth, async (req, res) => {
   const form = req.body;
   const searhForm = form.category == "Others"? null : form.sp_Number;
+
+  let loop = true;
+  let barCode, index = "";
 
   try {
     let stash = await Stash.findOne({ userId: req.user._id });
@@ -25,7 +29,7 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
     if (stash) { 
       // Search for duplicate
       // if exist stores the index in variable dup.
-      if (searhForm) {
+      if (searhForm && form.category != "Others") {
         stashCopy = stash.registeredItems;
         dup = stashCopy.findIndex((e) => (e.sp_Number === form.sp_Number && form.sp_Number !== ""));
 
@@ -35,8 +39,21 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
         }
       }
 
-      // Save image to AWS S3, extract the imagae s3 
-      // location and save mongodDB server.
+      /*Ensures a barcode number is not used 
+      twice.
+      */
+      while(loop) {
+        barCode = barcodeGenerator();
+        console.log("Barcode: ", barCode);
+        index = stash.registeredItems.findIndex(e => e.barcodeNumber == barCode);
+        console.log("Index: ", index);
+        if (index < 0 || index == -1) loop = false;
+      };
+
+      form.barcodeNumber = barCode;
+
+      /* Save image to AWS S3, extract the imagae s3 
+      */
       for (let i = 0; i < form.pictures.length; i++) {
         awsImageURL = await saveImage(form.pictures[i].base64);
         form.pictures[i].base64 = "",
@@ -53,7 +70,7 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
 
     // Save new form to database.
     await stash.save();
-    res.status(201).send({ message: "Successfully added stash" });
+    res.status(201).send({ message: "Successfully added stash", barCodeNum: barCode });
   } catch (error) {
     console.error("Error adding stash:", error); // Log the actual error
     res.status(422).send({ error: "Could not add stash" });
