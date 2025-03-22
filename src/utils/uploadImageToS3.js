@@ -20,7 +20,11 @@ export const uploadImageToS3 = async (base64Image, fileType) => {
     };
 
     // Upload to S3
-    const uploadResult = await s3.upload(params).promise();
+    const uploadResult = await s3.upload(params, {
+      progressCallback(progress){
+        console.log(`Uploaded: ${progress.loaded}/ ${progress.total}`);
+      }
+    }).promise();
     return uploadResult.Location; // Returns the file URL
   } catch (error) {
     console.error('S3 Upload Error:', error);

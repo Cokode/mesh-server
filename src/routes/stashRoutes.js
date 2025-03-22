@@ -122,15 +122,24 @@ router.post('/loadReport', requireAuth, async (req, res) => {
         return res.status(404).send({ message: "Cannot find stash item" });
       }
 
+      await stash.lostItems.push(lostStash); //  updates lostItems record.
+
       lostStash.LostStatus = true;
       lostStash.priorityStatus = "Very important";
       lostStash.lost_comment = comment;
       lostStash.date_reported = new Date().toISOString();
       lostStash.ownerID = req.user._id;
-      lostStash.ownerInfo = req.user;
+
+      const itemOwner = req.user;
+      itemOwner.password = "";
+      itemOwner.address = "";
+      itemOwner.email = "";
       
+      lostStash.ownerInfo = itemOwner;
+      
+      await stash.save();
       await reports.missing.push(lostStash);
-      reports.save();
+      await reports.save();
 
       return res.status(201).send({
         message: "Report submitted successfully",

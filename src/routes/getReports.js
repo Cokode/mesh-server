@@ -16,7 +16,14 @@ router.get("/getReport",  requireAuth, async(req, res) => {
   if (!reports) {
     res.status(404).send({message: "nothing found."});
   } 
-
+  
+  // remove unwanted stash
+/* 
+  let filtered = reports.missing.filter(e => e.barcodeNumber != "");
+  reports.missing = filtered;
+  console.log("Filtered: ", filtered);
+  await reports.save();
+  console.log(reports.missing); */
   res.status(200).send(reports.missing);
 });
 
