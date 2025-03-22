@@ -115,7 +115,7 @@ router.post('/loadReport', requireAuth, async (req, res) => {
     
     let stash = await Stash.findOne({ userId: req.user._id });
 
-    if (stash) {
+    if (stash) { 
       let lostStash = stash.registeredItems.find(element => element._id.toString() == id);
 
       if (!lostStash) {
@@ -123,6 +123,7 @@ router.post('/loadReport', requireAuth, async (req, res) => {
       }
 
       await stash.lostItems.push(lostStash); //  updates lostItems record.
+      stash.registeredItems = stash.registeredItems.filter((e) => (e._id.toString() !== id));
 
       lostStash.LostStatus = true;
       lostStash.priorityStatus = "Very important";
@@ -170,6 +171,31 @@ router.delete('/delete', async (req, res) => {
   // await reports.save();
   res.send("sucessful deleted.");
 
+})
+
+router.get('/getUser', requireAuth, async (req, res) => {
+  const itemOwner = req.user;
+
+  let ownerStash = await Stash.findOne({ userId: req.user._id });
+
+  if (!ownerStash) {
+    return es.status(404).send({message: "invalid Request"});
+  }
+
+  let body = {};
+
+  itemOwner.password = "",
+
+  body.reg_stash = await ownerStash.registeredItems.length,
+  body.ret_stash = await ownerStash.foundItems.length,
+  body.lost_stash = await ownerStash.lostItems.length;
+
+  body.profilePicture = ownerStash.registeredItems[0].pictures[0].pictureUrls;
+  body.user = itemOwner;
+
+
+  console.log(body);
+  return res.status(201).send({body, message: "successful."});
 })
 
 
