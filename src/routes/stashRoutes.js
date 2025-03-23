@@ -9,6 +9,7 @@ import { barcodeGenerator } from '../utils/barcodeGenerator.js';
 
 const Stash = mongoose.model('Stash');
 const Reports = mongoose.model('Reports');
+const User = mongoose.model('User');
 const router = express.Router();
 
   
@@ -179,7 +180,7 @@ router.get('/getUser', requireAuth, async (req, res) => {
   let ownerStash = await Stash.findOne({ userId: req.user._id });
 
   if (!ownerStash) {
-    return es.status(404).send({message: "invalid Request"});
+    return res.status(404).send({message: "invalid Request"});
   }
 
   let body = {};
@@ -190,13 +191,30 @@ router.get('/getUser', requireAuth, async (req, res) => {
   body.ret_stash = await ownerStash.foundItems.length,
   body.lost_stash = await ownerStash.lostItems.length;
 
-  body.profilePicture = ownerStash.registeredItems[0].pictures[0].pictureUrls;
+  body.profilePicture = req.user.profilePicture?  req.user.profilePicture :  ownerStash.registeredItems[0].pictures[0].pictureUrls;
   body.user = itemOwner;
 
-
-  console.log(body);
   return res.status(201).send({body, message: "successful."});
-})
+});
+
+router.post('/update_pro', requireAuth, async (req, res) => {
+
+  const existingUser = await User.findOne({ userId: req.user._id });
+
+  if (!existingUser) {
+    return res.status(404).send({message: "invalid Request"});
+  }
+
+  const { img } = req.body;
+  let imageUrl = await saveImage(img);
+
+  console.log(imageUrl, " ImageURL");
+  existingUser.profilePicture = imageUrl;
+
+  await existingUser.save();
+  return res.status(200).send({ message: "success." });
+
+});
 
 
 export default router;

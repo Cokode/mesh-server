@@ -6,7 +6,7 @@ export const saveImage = async (base64) => {
   try {
     // const { base64 } = req.body; // Get Base64 image from request
 
-    if (!base64) return res.status(400).json({ message: 'No image provided' });
+    if (!base64) return null;
 
     const imageUrl = await uploadImageToS3(base64, "png"); // Upload to S3
 
