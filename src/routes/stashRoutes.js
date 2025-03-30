@@ -197,20 +197,46 @@ router.get('/getUser', requireAuth, async (req, res) => {
   return res.status(201).send({body, message: "successful."});
 });
 
+
+/*  Optimization Suggestion:
+
+  Update the Reports schema so that each user has an object 
+  containing an array of their lost items (stash). 
+
+  This way, instead of iterating through all lost items to find a specific one, 
+  we can simply locate the user object, which holds all lost stash entries for that user.
+*/
 router.post('/update_pro', requireAuth, async (req, res) => {
 
-  const existingUser = await User.findOne({ userId: req.user._id });
+  const id = req.user._id;
+  let existingUser = await User.findById({_id: id});
+  const reports= await Reports.findOne({ _id: process.env.REPORTBANK });
 
   if (!existingUser) {
     return res.status(404).send({message: "invalid Request"});
   }
 
   const { img } = req.body;
-  let imageUrl = await saveImage(img);
-
-  console.log(imageUrl, " ImageURL");
+  let imageUrl =  await saveImage(img);
   existingUser.profilePicture = imageUrl;
 
+
+  if ( reports ) {
+    let missing = reports.missing;
+
+    // Update user profile picture in lost stash
+    missing.forEach(element => { 
+      if (element.ownerInfo._id.toString() == id) {
+        element.ownerInfo.profilePicture = imageUrl;
+      }}
+    );
+  
+    reports.missing = missing;
+    reports.markModified('missing'); //Inform mongoogse of modification made
+  
+    await reports.save();
+  }
+  
   await existingUser.save();
   return res.status(200).send({ message: "success." });
 

@@ -1,8 +1,6 @@
 import { uploadImageToS3 } from "./uploadImageToS3.js";
 
 export const saveImage = async (base64) => {
-
-  console.log("in SaveImage function.");
   try {
     // const { base64 } = req.body; // Get Base64 image from request
 

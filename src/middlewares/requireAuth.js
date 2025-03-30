@@ -7,16 +7,12 @@ import dotenv from "dotenv"; // maybe remove
 const requireAuth = (req, res, next) => {
   const { authorization } = req.headers;
 
-  console.log("I am in authorization...." + authorization)
-
   if (!authorization) {
     console.log("authorization failed ....")
     return res.status(401).send({error : 'you must be logged in.'});
   }
 
   const token = authorization.replace('Bearer ', '');
-
-  console.log(token)
 
   jwt.verify(token, process.env.JWT_SECRET, async (err, payload) => {
     if (err) {
@@ -25,10 +21,12 @@ const requireAuth = (req, res, next) => {
       return res.status(401).send({error: 'you must be logged in'});
     }
     
-    const { userId } = payload;  // extracted  user ID from the jwt given
-    const user = await User.findById(userId);
+    const { email } = payload; // extracted  user email from the jwt given
+    const user = await User.findOne({ email });
+
+    console.log("User after confirming token: \n", user);
+
     req.user = user;
-    console.log("USER: " + user);
 
     next();
   });

@@ -6,6 +6,14 @@ import requireAuth from '../middlewares/requireAuth.js';
 const Reports = mongoose.model('Reports');
 const router = express.Router();
 
+/* Optimization Suggestion:
+
+  Update the Reports schema so that each user has an object 
+  containing an array of their lost items (stash). 
+
+  This way, instead of iterating through all lost items to find a specific one, 
+  we can simply locate the user object, which holds all lost stash entries for that user.
+*/
 router.get("/getReport",  requireAuth, async(req, res) => {
 
   console.log(req.headers);
