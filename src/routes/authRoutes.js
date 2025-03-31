@@ -1,7 +1,8 @@
 import express from "express";
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 import jwt from "jsonwebtoken";
 const User = mongoose.model('User');
+const UserBoard = mongoose.model('UserBoard');
 
 const router = express.Router();
 
@@ -28,6 +29,11 @@ router.post('/register', async (req, res) => {  // Register a new user
 
     await newUser.save();
 
+    const userBoard = new UserBoard({
+      userId: newUser._id,
+    });
+
+    await userBoard.save();
    
     res.status(201).json({  // Respond with success 
       message: 'User account created successfully!',
@@ -39,6 +45,8 @@ router.post('/register', async (req, res) => {  // Register a new user
         username: newUser.username,
       },
       });
+
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error.' });
