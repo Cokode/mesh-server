@@ -3,6 +3,7 @@ import { mongoose } from "mongoose";
 const User = mongoose.model('User');
 const Reports = mongoose.model('Reports');
 import requireAuth from "../middlewares/requireAuth.js";
+import bcrypt from "bcrypt";
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.put('/update-profile', requireAuth, async(req, res) => {
   try {
     const updatedUser = await User.findByIdAndUpdate(id, updates, { // Update user fields based on the provided data
       new: true, // Return the updated document
-      // runValidators: true, // Ensure validation rules are applied
+       runValidators: true, // Ensure validation rules are applied
     }); 
  
     // const lostStash = await Reports.findOneAndUpdate({filer}, {update});
@@ -26,8 +27,6 @@ router.put('/update-profile', requireAuth, async(req, res) => {
           ...element.ownerInfo,
           ...updates
         };
-
-        console.log("Updated Element: ", element);
       }
 
     });

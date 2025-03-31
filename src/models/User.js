@@ -60,6 +60,17 @@ userSchema.pre('save', async function (next) {  // **Salting and Hashing Passwor
   next();
 });
 
+userSchema.pre('findOneAndUpdate', async function (next) {
+
+  if (this._update.password) { // Check if password is being updated
+    const saltRounds = 10; // Define the cost of hashing
+    const salt = await bcrypt.genSalt(saltRounds); // Generate a unique salt
+    this._update.password = await bcrypt.hash(this._update.password, salt); // Hash the password
+  }
+  
+  next();
+});
+
 // **Method to Compare Passwords**
 userSchema.methods.comparePassword = async function (inputPassword) {
   return bcrypt.compare(inputPassword, this.password); // Compares input with hashed password

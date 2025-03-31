@@ -242,5 +242,21 @@ router.post('/update_pro', requireAuth, async (req, res) => {
 
 });
 
+// Dommy Route to reset hashed passwords. 
+// Remember to remove the line in schema 
+// that checks if password changed
+router.post('/pass', async (req, res) => {
+  const {email} = req.body;
+
+  const user = await User.findOne({ email });
+
+  user.password = "one"
+
+  await user.save();
+
+  res.status(200).send({message: "Yes! DONE"});
+
+})
+
 
 export default router;
