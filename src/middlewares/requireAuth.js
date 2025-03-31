@@ -24,7 +24,7 @@ const requireAuth = (req, res, next) => {
     const { email } = payload; // extracted  user email from the jwt given
     const user = await User.findOne({ email });
 
-    console.log("User after confirming token: \n", user);
+    //console.log("User after confirming token: \n", user);
 
     req.user = user;
 

@@ -1,32 +1,52 @@
 import { Router } from "express";
 import { mongoose } from "mongoose";
 const User = mongoose.model('User');
+const Reports = mongoose.model('Reports');
 import requireAuth from "../middlewares/requireAuth.js";
 
 const router = Router();
 
 router.put('/update-profile', requireAuth, async(req, res) => {
-  const { userId } = req.body; // Assume user ID is passed in the request body
   const updates = req.body; // Other fields to be updated
+  const id = req.user._id.toString();
 
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, updates, { // Update user fields based on the provided data
+    const updatedUser = await User.findByIdAndUpdate(id, updates, { // Update user fields based on the provided data
       new: true, // Return the updated document
-      runValidators: true, // Ensure validation rules are applied
+      // runValidators: true, // Ensure validation rules are applied
+    }); 
+ 
+    // const lostStash = await Reports.findOneAndUpdate({filer}, {update});
+    const reports = await Reports.findOne({ "_id" : process.env.REPORTBANK });
+
+    reports?.missing.forEach(element => {
+
+      if (element.ownerInfo._id.toString() == id) {
+        element.ownerInfo = {
+          ...element.ownerInfo,
+          ...updates
+        };
+
+        console.log("Updated Element: ", element);
+      }
+
     });
 
     if (!updatedUser) {
       console.log(" I can't update this user");
-        return res.status(404).json({ error: 'User not found.' });
+        return res.status(404).send({ error: 'User not found.' });
     }
 
-    res.status(200).json({ // Respond with success
+    reports.markModified('missing');
+    await reports.save();
+
+    return res.status(201).send({ // Respond with success
       message: 'Profile updated successfully!',
-      user: updatedUser,
+     // user: updatedUser,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal Server Error.' });
+    return res.status(500).json({ error: 'Internal Server Error.' });
   }
 });
 
