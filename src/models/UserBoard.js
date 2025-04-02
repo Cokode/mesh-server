@@ -13,7 +13,15 @@ const userBoardSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  lostStash: {
+    type: Number,
+    default: 0,
+  },
   rewardPoints: {
+    type: Number,
+    default: 0
+  },
+  pointsUsed: {
     type: Number,
     default: 0
   },
@@ -33,6 +41,14 @@ const userBoardSchema = new mongoose.Schema({
   discoveredItems: {
     type: [itemSchema], // Use array of subdocuments
   },
+  registeredStash: {
+    type: Number,
+    default: 0
+  },
+  profilePicture: {
+    type: String,
+    default: ""
+  }
 });
 
 mongoose.model('UserBoard', userBoardSchema);

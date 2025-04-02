@@ -10,10 +10,10 @@ router.post('/register', async (req, res) => {  // Register a new user
   const { firstName, lastName, email, username, password } = req.body;
   console.log(req.body)
 
-  // console.log(`Origin: ${req.headers.origin}`);
+  //console.log(`Origin: ${req.headers.origin}`);
 
   try {
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    const existingUser = await User.findOne({email: email});
     
     if (existingUser) {
       console.log(existingUser + " this is existing user")
@@ -37,15 +37,15 @@ router.post('/register', async (req, res) => {  // Register a new user
    
     res.status(201).json({  // Respond with success 
       message: 'User account created successfully!',
-      user: {
+    });
+
+    /* user: {
         id: newUser._id,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         email: newUser.email,
         username: newUser.username,
-      },
-      });
-
+      }, */
 
   } catch (error) {
     console.error(error);
@@ -63,6 +63,12 @@ router.post('/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
+
+    // const userBoard = new UserBoard({
+    //   userId: user._id,
+    // });
+
+    // await userBoard.save();
 
     const isMatch = await user.comparePassword(password);     // Compare passwords
     if (!isMatch) {

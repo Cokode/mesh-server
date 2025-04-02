@@ -21,8 +21,9 @@ router.get("/getReport",  requireAuth, async(req, res) => {
   // the id must be hidden in env file
   const reports = await Reports.findOne({"_id": process.env.REPORTBANK})
 
+  console.log(reports);
   if (!reports) {
-    res.status(404).send({message: "nothing found."});
+    return res.status(404).send({message: "nothing found."});
   } 
   
   // remove unwanted stash
@@ -32,7 +33,7 @@ router.get("/getReport",  requireAuth, async(req, res) => {
   console.log("Filtered: ", filtered);
   await reports.save();
   console.log(reports.missing); */
-  res.status(200).send(reports.missing);
+  return res.status(200).send(reports.missing);
 });
 
 

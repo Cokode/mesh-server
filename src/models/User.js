@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
   username: {
       type: String,
       unique: true,
-      required: true,
+      required: false,
       trim: true,
   },
   profilePicture: {
@@ -41,14 +41,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'Not verified'  
   },
-  bonusPoints: {
-    type:Number,
-    default: 0
-  },
-  pointUsed: {
-    type:Number,
-    default: 0
-  }
 })
 
 userSchema.pre('save', async function (next) {  // **Salting and Hashing Password Before Save**

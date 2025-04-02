@@ -10,33 +10,40 @@ import { barcodeGenerator } from '../utils/barcodeGenerator.js';
 const Stash = mongoose.model('Stash');
 const Reports = mongoose.model('Reports');
 const User = mongoose.model('User');
+const UserBoard = mongoose.model('UserBoard');
 const router = express.Router();
 
   
 // Route to add/save Stash to database.
 router.post('/api/addstash', requireAuth, async (req, res) => {
   const form = req.body;
-  const searhForm = form.category == "Others"? null : form.sp_Number;
+
+  console.log(form)
 
   let loop = true;
   let barCode, index = "";
+  let id = req.user._id.toString();
 
   try {
-    let stash = await Stash.findOne({ userId: req.user._id });
+    const userBoard = await UserBoard.findOne({ userId: id });
+    let stash = await Stash.findOne({ userId: id});
+
     let dup = -1;
+    let dup1 = -1;
     let stashCopy = null;
     let awsImageURL = "";
 
     if (stash) { 
       // Search for duplicate
       // if exist stores the index in variable dup.
-      if (searhForm && form.category != "Others") {
+      if (form.category !== "Others") {
         stashCopy = stash.registeredItems;
-        dup = stashCopy.findIndex((e) => (e.sp_Number === form.sp_Number && form.sp_Number !== ""));
+        dup = stashCopy.findIndex((e) => (e.sp_Number === form.sp_Number));
+        dup1 = stashCopy.findIndex((e) => (e.tagNumber === form.tagNumber && form.tagNumber !== ""));
 
-        if (dup >= 0) {
-          res.status(406).send({message: "Duplicate found. cannot add."});
-          return;
+        if (dup >= 0 || dup1 >= 0) {
+          console.log("Here.... Dup ", dup, " dup1:", dup1);
+          return res.status(406).send({message: "Duplicate found. cannot add."});
         }
       }
 
@@ -66,11 +73,26 @@ router.post('/api/addstash', requireAuth, async (req, res) => {
       console.log(awsImageURL, " : ", form);
       stash.registeredItems.push(form);
     } else {
-      stash = new Stash({ registeredItems: [form], userId: req.user._id });
+
+      for (let i = 0; i < form.pictures.length; i++) {
+        awsImageURL = await saveImage(form.pictures[i].base64);
+        form.pictures[i].base64 = "",
+        form.pictures[i].pictureUrls = awsImageURL;
+        console.log(form.pictures[i].base64);
+        console.log(form.pictures[i].pictureUrls);
+      }
+
+      stash = new Stash();
+      stash.registeredItems.push(form);
+      stash.userId = id;
     }
 
+    stash.markModified('registeredItems');
+    userBoard.registeredStash += 1;
     // Save new form to database.
     await stash.save();
+    await userBoard.save();
+
     res.status(201).send({ message: "Successfully added stash", barCodeNum: barCode });
   } catch (error) {
     console.error("Error adding stash:", error); // Log the actual error
@@ -103,45 +125,75 @@ router.get('/getItems', requireAuth, async (req, res) => {
 // lost the item.or the owner of the item.
 router.post('/loadReport', requireAuth, async (req, res) => {
   const { comment, id } = req.body;
+
+  // Validate required fields
+  if (!comment || !id) {
+    return res.status(400).send({ error: "Bad Request: Missing required fields." });
+  }
+
   console.log(req.body);
 
+  const userId = req.user._id.toString();
+
   try {
+    const reports = await Reports.findOne({ "_id": process.env.REPORTBANK });
+    const userBoards = await UserBoard.findOne({ userId });
 
-    const reports = await Reports.findOne({"_id": process.env.REPORTBANK});
-
-    if (isReportExist(reports.missing, id)){
-      res.status(406).send({response: "Item already has been reproted"});
-      return;
+    // Check required resources
+    if (!reports || !userBoards) {
+      return res.status(500).send({ error: "Internal Server Error: Missing required resources." });
     }
-    
-    let stash = await Stash.findOne({ userId: req.user._id });
 
-    if (stash) { 
-      let lostStash = stash.registeredItems.find(element => element._id.toString() == id);
+    // Check if report already exists
+    if (isReportExist(reports.missing, id)) {
+      return res.status(406).send({ response: "Item has already been reported" });
+    }
+
+    // Retrieve stash
+    const stash = await Stash.findOne({ userId: req.user._id });
+
+    if (stash) {
+      // Find the lost stash item
+      const lostStash = stash.registeredItems.find((element) => element._id.toString() === id);
 
       if (!lostStash) {
         return res.status(404).send({ message: "Cannot find stash item" });
       }
 
-      await stash.lostItems.push(lostStash); //  updates lostItems record.
-      stash.registeredItems = stash.registeredItems.filter((e) => (e._id.toString() !== id));
+      // Update lost items
+      stash.lostItems.push(lostStash);
+      stash.markModified('lostItems');
 
+      // Remove from registered items
+      stash.registeredItems = stash.registeredItems.filter((e) => e._id.toString() !== id);
+      stash.markModified('registeredItems');
+
+      // Update lost stash details
       lostStash.LostStatus = true;
       lostStash.priorityStatus = "Very important";
       lostStash.lost_comment = comment;
-      lostStash.date_reported = new Date().toISOString();
+      lostStash.date_reported = new Date().toDateString();
       lostStash.ownerID = req.user._id;
 
       const itemOwner = req.user;
       itemOwner.password = "";
       itemOwner.address = "";
       itemOwner.email = "";
-      
+      itemOwner.reportID = req.user._id;
+
       lostStash.ownerInfo = itemOwner;
-      
-      await stash.save();
-      await reports.missing.push(lostStash);
+
+      // Update user boards
+      userBoards.lostStash += 1;
+      await userBoards.save();
+
+      // Update reports
+      reports.missing.push(lostStash);
+      reports.markModified('missing');
       await reports.save();
+
+      // Save stash
+      await stash.save();
 
       return res.status(201).send({
         message: "Report submitted successfully",
@@ -151,7 +203,7 @@ router.post('/loadReport', requireAuth, async (req, res) => {
       return res.status(404).send({ message: "Stash not found for the user" });
     }
   } catch (error) {
-    console.error(error);
+    console.error("Error during report submission.", error);
     return res.status(500).send({ message: "An error occurred", error });
   }
 });
@@ -175,26 +227,12 @@ router.delete('/delete', async (req, res) => {
 })
 
 router.get('/getUser', requireAuth, async (req, res) => {
-  const itemOwner = req.user;
+  const  itemOwner = req.user;
 
-  let ownerStash = await Stash.findOne({ userId: req.user._id });
-
-  if (!ownerStash) {
-    return res.status(404).send({message: "invalid Request"});
-  }
-
-  let body = {};
-
-  itemOwner.password = "",
-
-  body.reg_stash = await ownerStash.registeredItems.length,
-  body.ret_stash = await ownerStash.foundItems.length,
-  body.lost_stash = await ownerStash.lostItems.length;
-
-  body.profilePicture = req.user.profilePicture?  req.user.profilePicture :  ownerStash.registeredItems[0].pictures[0].pictureUrls;
-  body.user = itemOwner;
-
-  return res.status(201).send({body, message: "successful."});
+ 
+  itemOwner.password = "";
+  
+  return res.status(201).send({itemOwner});
 });
 
 
@@ -241,6 +279,29 @@ router.post('/update_pro', requireAuth, async (req, res) => {
   return res.status(200).send({ message: "success." });
 
 });
+
+router.get('/boardData', requireAuth, async (req, res) => {
+  //const { id } = req.user._id;
+
+  console.log(req.user);
+
+  try {
+
+    let id = req.user._id.toString();
+
+    const userBoards = await UserBoard.findOne({userId: id});
+
+    if (!userBoards){
+      console.log("error can't find");
+      return;
+    }
+    
+    return res.status(200).send({data : userBoards});
+  } catch (error) {
+    console.log("Error fetching data: ", error);
+  }
+  
+})
 
 // Dommy Route to reset hashed passwords. 
 // Remember to remove the line in schema 
