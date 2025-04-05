@@ -86,6 +86,7 @@ router.post('/updateBoard', requireAuth, async (req, res) => {
     if (lostOne) {
       ownerStash.foundItems.push(lostOne); // Move to foundItems
       ownerStash.lostItems = ownerStash.lostItems.filter((e) => e._id.toString() !== id); // Remove from lostItems
+      ownerStash.FoundStatus = true;
       ownerStash.markModified('foundItems');
       ownerStash.markModified('lostItems');
     }
