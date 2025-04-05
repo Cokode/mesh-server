@@ -108,7 +108,7 @@ router.get('/getItems', requireAuth, async (req, res) => {
     const stash = await Stash.findOne({ userId: req.user._id });
 
     if (!stash || stash?.registeredItems.length === 0) {
-      return res.status(200).send({ error: 'No items found for you.' });
+      return res.status(404).send({ error: 'No items found for you.' });
     }
 
     res.status(200).send(stash.registeredItems);
@@ -319,5 +319,41 @@ router.post('/pass', async (req, res) => {
 
 })
 
+router.post("/delete-stash", requireAuth, async (req, res) => {
+  const { id } = req.body;
+
+  console.log(req.user);
+  let userID = req.user._id.toString();
+ 
+  if (!id) {
+    return res.status(400).json({ error: "Stash ID is required" });
+  }
+
+  try {
+    // Find the stash that contains the item
+    const stash = await Stash.findOne({ userId: userID });
+    const userBoard = await UserBoard.findOne({userId: userID});
+
+    if (!stash || !userBoard) {
+      return res.status(404).json({ error: "Stash not found" });
+    }
+
+    // Filter out the item to be deleted
+    stash.registeredItems = stash.registeredItems.filter(
+      (item) => item._id.toString() !== id
+    );
+
+    userBoard.registeredStash -= 1;
+
+    stash.markModified('registeredItems')
+    await stash.save();
+    await userBoard.save();
+
+    res.status(200).json({ message: "Stash item deleted successfully" });
+  } catch (error) {
+    console.error("Delete Stash Error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default router;

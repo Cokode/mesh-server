@@ -68,11 +68,6 @@ const item = new mongoose.Schema({
   ownerID: {
     type: String,
   },
-
-  ownerInfo: {
-    type: Object,
-    default: null,
-  }
 });
 
 const stashSchema = new mongoose.Schema({
